@@ -7,21 +7,21 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/mhpenta/yttext/pkg/api"
+	"github.com/mhpenta/yttext/pkg/yttext"
 )
 
 const defaultLineLength = 80
 
 // Formatter is the interface that all transcript formatters must implement
 type Formatter interface {
-	Format(transcripts []api.Transcript) (string, error)
+	Format(transcripts []yttext.Transcript) (string, error)
 }
 
 // TextFormatter formats transcripts as plain text with timestamps
 type TextFormatter struct{}
 
 // Format implements the Formatter interface for TextFormatter
-func (f *TextFormatter) Format(transcripts []api.Transcript) (string, error) {
+func (f *TextFormatter) Format(transcripts []yttext.Transcript) (string, error) {
 	var sb strings.Builder
 	for _, t := range transcripts {
 		timestamp := formatTime(t.StartTime)
@@ -39,7 +39,7 @@ type ReadableFormatter struct {
 }
 
 // Format implements the Formatter interface for ReadableFormatter
-func (f *ReadableFormatter) Format(transcripts []api.Transcript) (string, error) {
+func (f *ReadableFormatter) Format(transcripts []yttext.Transcript) (string, error) {
 	if f.MaxLineLength <= 0 {
 		f.MaxLineLength = defaultLineLength
 	}
@@ -85,7 +85,7 @@ type JSONFormatter struct {
 }
 
 // Format implements the Formatter interface for JSONFormatter
-func (f *JSONFormatter) Format(transcripts []api.Transcript) (string, error) {
+func (f *JSONFormatter) Format(transcripts []yttext.Transcript) (string, error) {
 	var jsonData []byte
 	var err error
 	if f.Pretty {
@@ -103,7 +103,7 @@ func (f *JSONFormatter) Format(transcripts []api.Transcript) (string, error) {
 type SRTFormatter struct{}
 
 // Format implements the Formatter interface for SRTFormatter
-func (f *SRTFormatter) Format(transcripts []api.Transcript) (string, error) {
+func (f *SRTFormatter) Format(transcripts []yttext.Transcript) (string, error) {
 	var sb strings.Builder
 	for i, t := range transcripts {
 		startTime := t.StartTime
@@ -162,7 +162,7 @@ func shouldStartNewParagraph(prevText, currText string) bool {
 }
 
 // groupIntoParagraphs groups transcript segments into coherent paragraphs
-func groupIntoParagraphs(transcripts []api.Transcript) []string {
+func groupIntoParagraphs(transcripts []yttext.Transcript) []string {
 	if len(transcripts) == 0 {
 		return []string{}
 	}

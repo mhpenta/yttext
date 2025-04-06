@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mhpenta/yttext/pkg/api"
 	"github.com/mhpenta/yttext/pkg/formatters"
+	"github.com/mhpenta/yttext/pkg/yttext"
 
 	"github.com/atotto/clipboard"
 )
@@ -67,7 +67,7 @@ func (c *CLI) Run() int {
 		c.FormatType = "readable"
 	}
 
-	ytAPI := api.New()
+	ytAPI := yttext.New()
 
 	transcripts, err := ytAPI.GetTranscriptsByURL(c.VideoURL, c.LanguageCode)
 	if err != nil {
