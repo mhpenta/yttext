@@ -7,7 +7,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/mhpenta/yttext/pkg/yttext"
+	"github.com/mhpenta/yttext/yttext"
 )
 
 const defaultLineLength = 80

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/mhpenta/yttext/pkg/cli"
+	"github.com/mhpenta/yttext/cli"
 )
 
 func main() {
