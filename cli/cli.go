@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mhpenta/yttext"
 	"github.com/mhpenta/yttext/formatters"
-	"github.com/mhpenta/yttext/yttext"
 
 	"github.com/atotto/clipboard"
 )
