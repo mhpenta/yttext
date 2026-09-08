@@ -5,7 +5,7 @@ A command-line tool and library that extracts transcript text from YouTube video
 ## Installation
 
 ```bash
-go install github.com/mhpenta/yttext@latest
+go install github.com/mhpenta/yttext/cmd/yttext@latest
 ```
 
 Or clone and build manually:
@@ -13,13 +13,17 @@ Or clone and build manually:
 ```bash
 git clone https://github.com/mhpenta/yttext.git
 cd yttext
-go build
+go build -o yttext ./cmd/yttext
+./yttext -help
 ```
+
+The module root is the library; the executable is in `cmd/yttext`. For library
+use, run `go get github.com/mhpenta/yttext` in your Go project.
 
 ## Usage
 
 ```bash
-yttext [options] "[youtube_url]"
+yttext [options] "[youtube_url_or_video_id]"
 ```
 
 Options:
@@ -44,6 +48,9 @@ Examples:
 # Default text output with timestamps
 yttext "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
+# A bare video ID also works
+yttext dQw4w9WgXcQ
+
 # JSON output
 yttext -format json "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
@@ -61,6 +68,10 @@ yttext -readable -copy "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 Note: Always put the YouTube URL in quotes to avoid shell interpretation issues with special characters.
+
+The requested language must have a matching caption track. English (`en`) is
+the default. An unavailable language produces an error listing available tracks;
+the tool does not silently select another language or translate captions.
 
 Text output format (default):
 ```
@@ -104,46 +115,76 @@ You can use yttext as a library in your Go projects:
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/mhpenta/yttext/pkg/api"
-	"github.com/mhpenta/yttext/pkg/formatters"
+	"github.com/mhpenta/yttext"
 )
 
 func main() {
 	// Create a new API client
-	ytAPI := api.New()
+	ytAPI := yttext.New()
 
-	// Get transcripts for a video
-	transcripts, err := ytAPI.GetTranscriptsByURL("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "en")
+	// Get a transcript for a video
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	transcript, err := ytAPI.GetTranscriptByURLContext(ctx, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "en")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Format the transcripts in different ways
-	
-	// 1. Basic text with timestamps
-	textFormatter, _ := formatters.NewFormatter("text")
-	textOutput, _ := textFormatter.Format(transcripts)
-	
-	// 2. JSON format
-	jsonFormatter, _ := formatters.NewFormatter("json")
-	jsonOutput, _ := jsonFormatter.Format(transcripts)
-	
-	// 3. SRT subtitle format
-	srtFormatter, _ := formatters.NewFormatter("srt")
-	srtOutput, _ := srtFormatter.Format(transcripts)
-	
-	// 4. Human-readable paragraphs
-	readableFormatter, _ := formatters.NewFormatter("readable")
-	readableOutput, _ := readableFormatter.Format(transcripts)
-	
-	// Print the readable format
-	fmt.Print(readableOutput)
+	// Format the transcript as reader-friendly paragraphs
+	fmt.Print(transcript.Readable())
 }
 ```
+
+Transcript values can also be formatted directly:
+
+```go
+transcript.Text()                  // timestamped text
+transcript.Readable()              // wrapped paragraphs
+transcript.SRT()                   // SubRip subtitles
+transcript.JSON()                  // pretty JSON
+transcript.Format(yttext.FormatSRT) // generic format selector
+```
+
+`Readable()` merges segments into paragraphs. To keep captions on separate lines:
+
+```go
+transcript.ReadableWithOptions(yttext.ReadableOptions{
+	MaxLineLength:    80,
+	GroupByParagraph: false,
+})
+```
+
+`New()` limits each HTTP request, including reading its response body, to 30
+seconds. `GetTranscriptContext` and `GetTranscriptByURLContext` accept a context
+for cancellation or a deadline across the entire fetch. The methods without a
+context remain available and use a background context.
+
+Use `NewWithHTTPClient(client)` to supply your own `*http.Client` with a timeout,
+transport, proxy, or cookie jar. A supplied client is used without modification,
+including its timeout (zero disables the client timeout); passing `nil` uses the
+default client settings. Underlying errors are wrapped, so `errors.Is` and
+`errors.As` can identify cancellation, timeouts, and other transport errors.
+Use `errors.Is(err, yttext.ErrLanguageUnavailable)` to detect a missing language.
+
+## Migrating existing library code
+
+`Transcript` now represents the complete transcript as a slice of `Segment`.
+Earlier versions used `Transcript` for a single caption. This is a breaking
+source change: replace individual `yttext.Transcript{Text: ...}` values with
+`yttext.Segment{Text: ...}`, and replace `[]yttext.Transcript` with
+`yttext.Transcript`. Update custom formatter method signatures accordingly.
+
+`GetTranscripts` and `GetTranscriptsByURL` remain deprecated aliases for
+`GetTranscript` and `GetTranscriptByURL`. These aliases use the new return type
+and do not preserve the old struct type. The JSON fields remain unchanged.
+Code that relied on silently falling back to another language must now handle
+`ErrLanguageUnavailable` and explicitly request a different language.
 
 ## Comparison with youtube-transcript-api (Python)
 
@@ -156,8 +197,8 @@ Feature | yttext (Go) | youtube-transcript-api (Python)
 **Transcript types** | No distinction | Can filter manually created vs auto-generated
 **Translation** | Not supported | Supports translating transcripts
 **Error handling** | Basic | Comprehensive with specific exceptions
-**Proxy support** | No | Yes
-**Cookie support** | No | Yes for age-restricted videos
+**Proxy support** | Via a custom HTTP client | Yes
+**Cookie support** | Via a custom HTTP client | Yes for age-restricted videos
 **Library usage** | Can be imported and used in Go projects | Can be imported and used in Python projects
 **HTML formatting** | No | Optional preservation of HTML formatting
 

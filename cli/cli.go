@@ -6,14 +6,15 @@ import (
 	"os"
 
 	"github.com/mhpenta/yttext"
-	"github.com/mhpenta/yttext/formatters"
 
 	"github.com/atotto/clipboard"
 )
 
 // CLI represents the command-line interface
 type CLI struct {
-	Debug        bool
+	// Deprecated: Debug is retained for compatibility and has no effect.
+	Debug bool
+	// Deprecated: LogRequest is retained for compatibility and has no effect.
 	LogRequest   bool
 	LanguageCode string
 	FormatType   string
@@ -26,19 +27,19 @@ type CLI struct {
 func NewCLI() *CLI {
 	cli := &CLI{}
 
-	flag.BoolVar(&cli.Debug, "debug", false, "Enable debug mode (writes API response to yttext_debug.json)")
-	flag.BoolVar(&cli.LogRequest, "log-request", false, "Log API request details without full debug output")
+	flag.BoolVar(&cli.Debug, "debug", false, "[Deprecated] No longer has any effect")
+	flag.BoolVar(&cli.LogRequest, "log-request", false, "[Deprecated] No longer has any effect")
 	flag.StringVar(&cli.LanguageCode, "lang", "en", "Language code for transcript (e.g., 'en', 'es', 'fr')")
 	flag.StringVar(&cli.FormatType, "format", "text", "Output format (text, json, srt, readable)")
 	flag.BoolVar(&cli.Readable, "readable", false, "Use readable format (same as --format=readable)")
 	flag.BoolVar(&cli.Copy, "copy", false, "Copy output to clipboard in addition to stdout")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] \"youtube_url\"\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] \"youtube_url_or_video_id\"\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Get transcript from YouTube video and print it to stdout\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nNote: Remember to put quotes around the YouTube URL to avoid shell interpretation issues\n")
+		fmt.Fprintf(os.Stderr, "\nNote: Remember to put quotes around YouTube URLs to avoid shell interpretation issues\n")
 	}
 
 	flag.Parse()
@@ -55,21 +56,13 @@ func NewCLI() *CLI {
 
 // Run executes the CLI application
 func (c *CLI) Run() int {
-	if c.Debug {
-		os.Setenv("YTTEXT_DEBUG", "1")
-	}
-
-	if c.LogRequest {
-		os.Setenv("YTTEXT_LOG_REQUEST", "1")
-	}
-
 	if c.Readable {
 		c.FormatType = "readable"
 	}
 
 	ytAPI := yttext.New()
 
-	transcripts, err := ytAPI.GetTranscriptsByURL(c.VideoURL, c.LanguageCode)
+	transcript, err := ytAPI.GetTranscriptByURL(c.VideoURL, c.LanguageCode)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 
@@ -78,25 +71,15 @@ func (c *CLI) Run() int {
 		fmt.Fprintf(os.Stderr, "2. Verify that the video has captions/transcripts available\n")
 		fmt.Fprintf(os.Stderr, "3. Try a different video to confirm the tool is working\n")
 
-		if !c.Debug {
-			fmt.Fprintf(os.Stderr, "4. Run with --debug flag for more detailed error information\n")
-		}
-
 		return 1
 	}
 
-	if len(transcripts) == 0 {
+	if len(transcript) == 0 {
 		fmt.Fprintf(os.Stderr, "Error: No transcript content found\n")
 		return 1
 	}
 
-	formatter, err := formatters.NewFormatter(c.FormatType)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
-
-	output, err := formatter.Format(transcripts)
+	output, err := transcript.Format(yttext.Format(c.FormatType))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
