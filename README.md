@@ -42,10 +42,6 @@ Options:
         Language code for transcript (e.g., 'en', 'es', 'fr')
   -readable
         Use readable format (same as --format=readable)
-  -debug
-        [Deprecated] No longer has any effect
-  -log-request
-        [Deprecated] No longer has any effect
 ```
 
 Examples:
@@ -168,8 +164,8 @@ transcript.ReadableWithOptions(yttext.ReadableOptions{
 
 `New()` limits each HTTP request, including reading its response body, to 30
 seconds. `GetTranscriptContext` and `GetTranscriptByURLContext` accept a context
-for cancellation or a deadline across the entire fetch. The methods without a
-context remain available and use a background context.
+for cancellation or a deadline across the entire fetch. `GetTranscript` and
+`GetTranscriptByURL` use a background context.
 
 Use `NewWithHTTPClient(client)` to supply your own `*http.Client` with a timeout,
 transport, proxy, or cookie jar. A supplied client is used without modification,
@@ -177,20 +173,6 @@ including its timeout (zero disables the client timeout); passing `nil` uses the
 default client settings. Underlying errors are wrapped, so `errors.Is` and
 `errors.As` can identify cancellation, timeouts, and other transport errors.
 Use `errors.Is(err, yttext.ErrLanguageUnavailable)` to detect a missing language.
-
-## Migrating existing library code
-
-`Transcript` now represents the complete transcript as a slice of `Segment`.
-Earlier versions used `Transcript` for a single caption. This is a breaking
-source change: replace individual `yttext.Transcript{Text: ...}` values with
-`yttext.Segment{Text: ...}`, and replace `[]yttext.Transcript` with
-`yttext.Transcript`. Update custom formatter method signatures accordingly.
-
-`GetTranscripts` and `GetTranscriptsByURL` remain deprecated aliases for
-`GetTranscript` and `GetTranscriptByURL`. These aliases use the new return type
-and do not preserve the old struct type. The JSON fields remain unchanged.
-Code that relied on silently falling back to another language must now handle
-`ErrLanguageUnavailable` and explicitly request a different language.
 
 ## Comparison with youtube-transcript-api (Python)
 
