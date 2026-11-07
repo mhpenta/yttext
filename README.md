@@ -1,6 +1,12 @@
 # yttext
 
-A command-line tool and library that extracts transcript text from YouTube videos. This is a rough Go port of the [youtube-transcript-api](https://github.com/jdepoix/youtube-transcript-api) Python package.
+A command-line tool and library that extracts transcript text from YouTube videos.
+
+> **yttext is a Go port of [youtube-transcript-api](https://github.com/jdepoix/youtube-transcript-api)**
+> by Jonas Depoix. The approach to fetching caption tracks comes from that project;
+> this port covers a subset of its features (see the
+> [comparison](#comparison-with-youtube-transcript-api-python) below). If you work in
+> Python, use the original.
 
 ## Installation
 
@@ -204,4 +210,6 @@ Feature | yttext (Go) | youtube-transcript-api (Python)
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE), which also carries the copyright notice of
+youtube-transcript-api (Copyright (c) 2018 Jonas Depoix), the MIT-licensed project
+this port is based on.
